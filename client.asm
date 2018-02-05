@@ -344,19 +344,15 @@ null_char:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohs, _htons
-; counts the number of characters in provided string
+; converts network -> host byte order and vice versa
 ;
 ; Input
-; rax = int
+; rax = value to convert
 ; Output
 ; rax = host or network byte order of input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohs:
-_htons:
-rol ax, 8
-rol rax, 16
-rol ax, 8
-
-shr rax, 16
+_htons: 
+rol ax, 8   
 
 ret
