@@ -62,9 +62,8 @@ _start:
 
     mov rdx, port         ; put value to convert into rdx
     call _atoi            ; convert contents of rdx to int, result in rax
-    mov [port], rax       ; move the int from rax back to variable
+    call _ntohs           ; convert rax to host byte order
 
-    mov rax, [port]
     mov [connectionSocket + sockaddr_in.sin_port], rax
 
     mov      word [sock], 0     ; Initialize socket value to 0, used for cleanup
@@ -123,8 +122,10 @@ _connect:
 
 ; Uses socket to send the message contained in testMsg to the server using SYS_WRITE
 _send:
+    mov rax, SYS_WRITE
+    mov rdi, [sock]
     mov rsi, testMsg            ; send our test message
-    call _prints
+    call _strlen
     syscall
 
     ret
@@ -337,3 +338,25 @@ null_char:
   pop rsi                   ; restore rsi (original string)
   pop rax                   ; restore rax
   ret                       ; return
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _ntohs, _htons
+; counts the number of characters in provided string
+;
+; Input
+; rax = int
+; Output
+; rax = host or network byte order of input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_ntohs:
+_htons:
+rol ax, 8
+rol rax, 16
+rol ax, 8
+
+shr rax, 16
+
+ret
