@@ -3,6 +3,8 @@
 ;   nasm -f elf64 -g -F dwarf -o client.o client.asm
 ;   ld client.o -o client
 
+global _start
+
 SYS_EXIT  equ 60
 SYS_READ  equ 0
 SYS_WRITE equ 1
@@ -10,7 +12,6 @@ STDIN     equ 0
 STDOUT    equ 1
 MAX_LEN   equ 6
 
-global _start
 
 ; Data definitions
 struc sockaddr_in
