@@ -10,6 +10,7 @@ SYS_READ  equ 0
 SYS_WRITE equ 1
 STDIN     equ 0
 STDOUT    equ 1
+STDERR    equ 2
 MAX_LEN   equ 6
 
 
@@ -24,20 +25,14 @@ endstruc
 section .bss
     sock resw 2                 ; connection socket descriptor
     socketBuffer resb 256       ; buffer to store data sent to the socket
-    readCount resw 2           ; keeps track of how much data was read from socketBuffer
-    inputBuffer                 ; buffer to store keyboard input from console
-    port resb 6
+    readCount resw 2            ; keeps track of how much data was read from socketBuffer
+    port resb 6                 ; get port from user
+    ip_addr resb 16             ; get ip from user    
 
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
-    sock_err_msg_len    equ $ - sock_err_msg
-
     connect_err_msg      db "Accept Failed", 0x0a, 0
-    connect_err_msg_len  equ $ - connect_err_msg
-
     testMsg          db "comp 7615 assignment 2 test message", 0x0a, 0
-    testMsgLen      equ $ - testMsg
-
     enterPortnum    db "Enter Port Number: ", 0
 
     ; sockaddr_in structure for the server the socket connects to
@@ -128,10 +123,8 @@ _connect:
 
 ; Uses socket to send the message contained in testMsg to the server using SYS_WRITE
 _send:
-    mov rax, 1                  ; SYS_WRITE
-    mov rdi, [sock]             ; connecting socket file descriptor
     mov rsi, testMsg            ; send our test message
-    mov rdx, testMsgLen         ; length of test message
+    call _prints
     syscall
 
     ret
@@ -165,12 +158,10 @@ _close_sock:
 ; error message and exit the application.
 _socket_fail:
     mov rsi, sock_err_msg
-    mov rdx, sock_err_msg_len
     call _fail
 
 _connect_fail:
     mov rsi, connect_err_msg
-    mov rdx, connect_err_msg_len
     call _fail
 
 
@@ -179,8 +170,7 @@ _connect_fail:
 ; the application. rsi and rdx must be loaded with the error message and
 ; length of the error message before calling _fail
 _fail:
-    mov rax, 1 ; SYS_WRITE
-    mov rdi, 2 ; STDERR
+    call _printerr
     syscall
 
     mov rdi, 1
@@ -304,6 +294,22 @@ _prints:
   call _strlen               ; load length of string into rdx
   mov rax, SYS_WRITE        ; write flag
   mov rdi, STDOUT           ; write to stdout
+  syscall
+  ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _prints
+; writes provided string to stdout
+;
+; Input
+; rsi = string to Display to STDOUT
+; Output:
+; None
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_printerr:
+  call _strlen               ; load length of string into rdx
+  mov rax, SYS_WRITE        ; write flag
+  mov rdi, STDERR           ; write to stdout
   syscall
   ret
 
