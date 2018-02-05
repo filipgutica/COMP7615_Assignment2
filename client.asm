@@ -1,6 +1,6 @@
 ; A TCP/IP client using x86_64 Linux syscalls
 ; Assemble and link as follows:
-;   nasm -f elf64 -g -o client.o client.asm
+;   nasm -f elf64 -g -F dwarf -o client.o client.asm
 ;   ld client.o -o client
 
 SYS_EXIT  equ 60
