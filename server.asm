@@ -32,6 +32,7 @@ section .bss
     echobuf             resb 256
     read_count          resw 2
     port                resb 6
+    client_ip           resb 16
     client_addr:
         istruc sockaddr_in
             at sockaddr_in.sin_family,  resw 1
@@ -43,19 +44,14 @@ section .bss
              
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
-    sock_err_msg_len    equ $ - sock_err_msg
 
     bind_err_msg        db "Failed to bind socket", 0x0a, 0
-    bind_err_msg_len    equ $ - bind_err_msg
 
     lstn_err_msg        db "Socket Listen Failed", 0x0a, 0
-    lstn_err_msg_len    equ $ - lstn_err_msg
 
     accept_err_msg      db "Accept Failed", 0x0a, 0
-    accept_err_msg_len  equ $ - accept_err_msg
 
-    accept_msg          db "Client Connected!", 0x0a, 0
-    accept_msg_len      equ $ - accept_msg
+    accept_msg          db "Client Connected from address: ", 0
 
     enterPortnum        db "Enter Port Number: ", 0
 
@@ -79,10 +75,10 @@ _start:
     mov rsi, enterPortnum
     call _prints
 
-    ;Read and store the user input into nvalue
+    ;Read and store the user input into port
     mov rax, SYS_READ       ; read flag
     mov rdi, STDIN          ; read from stdin
-    mov rsi, port           ; read into nvalue
+    mov rsi, port           ; read into nvalportue
     mov rdx, MAX_LEN        ; number bytes to be read
     syscall
 
@@ -185,14 +181,18 @@ _accept:
     ;; Store returned client socket descriptor
     mov     [client], rax
 
-    mov rax, [client_addr + sockaddr_in.sin_addr]
 
-    ;; Print connection message to stdout
-    mov       rax, 1             ; SYS_WRITE
-    mov       rdi, 1             ; STDOUT
-    mov       rsi, accept_msg
-    mov       rdx, accept_msg_len
-    syscall
+    mov rsi, accept_msg
+    call _prints
+
+    mov rax, [client_addr + sockaddr_in.sin_addr]   ; put the client ip address into rax
+    call _htonl                                     ; convert ip address to network byte order
+    mov rsi, rax                                    ; put the ip into RSI
+    call _printip                                   ; print the IP
+
+    mov rsi, client_ip
+    call _prints
+    
 
     ret
 
@@ -235,31 +235,25 @@ _close_sock:
 ;; error message and exit the application.
 _socket_fail:
     mov     rsi, sock_err_msg
-    mov     rdx, sock_err_msg_len
     call    _fail
 
 _bind_fail:
     mov     rsi, bind_err_msg
-    mov     rdx, bind_err_msg_len
     call    _fail
 
 _listen_fail:
     mov     rsi, lstn_err_msg
-    mov     rdx, lstn_err_msg_len
     call    _fail
 
 _accept_fail:
     mov     rsi, accept_err_msg
-    mov     rdx, accept_err_msg_len
     call    _fail
 
 ;; Calls the sys_write syscall, writing an error message to stderr, then exits
 ;; the application. rsi and rdx must be loaded with the error message and
 ;; length of the error message before calling _fail
 _fail:
-    mov        rax, 1 ; SYS_WRITE
-    mov        rdi, 2 ; STDERR
-    syscall
+    call _printerr
 
     mov        rdi, 1
     call       _exit
@@ -363,7 +357,7 @@ _itoa:
     dec rbx                 ; decrement my stack push counter
     cmp rbx, 0              ; check if stack push counter is 0
     jg .pop_chars           ; not 0 repeat
-    mov rax, 0x0a           ; add line feed
+    mov rax, 0              ; add line feed
     stosb                   ; write line feed to rdi => &num
     ret                     ; return to main
 
@@ -376,6 +370,126 @@ _itoa:
   mov rax, rsi              ; put original rax value back to rax
   xor rsi, rsi              ; clear rsi
   jmp .continue_push_chars  ; continue pushing characters
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _printip
+; prints out IP address in human readable format
+;
+; Input
+; rsi = ip as an integer
+; Output
+; none
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_printip:
+    xor rax,rax                 ; clear rax which will hold the result
+
+.fist_octet:
+    mov al, sil                ; first byte of rsi
+    mov rdi, client_ip  
+    call _itoa
+    mov rax, [client_ip]
+    push rax                   ; first octet
+    xor rax, rax
+
+    shr rsi, 8 
+
+.second_octet:
+    ; Clear Buffer
+    mov rdi, client_ip     ; get buffer ready for next octet
+    xor rax, rax
+    mov rcx, 16
+    rep stosb        
+
+    mov al, sil 
+    mov rdi, client_ip  
+    call _itoa
+    mov rax, [client_ip]
+    push rax
+    xor rax, rax
+
+    shr rsi, 8
+
+.third_octet:
+    ; Clear Buffer
+    mov rdi, client_ip     ; get buffer ready for next octet
+    xor rax, rax
+    mov rcx, 16
+    rep stosb     
+
+
+    mov al, sil 
+    mov rdi, client_ip  
+    call _itoa
+    mov rax, [client_ip]
+    push rax
+    xor rax, rax
+
+    shr rsi, 8
+
+.fourth_octet:
+    ; Clear Buffer
+    mov rdi, client_ip     ; get buffer ready for next octet
+    xor rax, rax
+    mov rcx, 16
+    rep stosb     
+
+    mov al, sil 
+    mov rdi, client_ip  
+    call _itoa
+    mov rax, [client_ip]
+    push rax
+    xor rax, rax
+  
+.done:
+    ; First octet
+    pop rax
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    mov rax, '.'
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    ; Second octet
+    pop rax
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    mov rax, '.'
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    ; Third octet
+    pop rax
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    mov rax, '.'
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    ; Final octet
+    pop rax
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    mov rax, 0xa
+    mov [client_ip], rax
+    mov rsi, client_ip
+    call _prints
+
+    ret
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _prints
