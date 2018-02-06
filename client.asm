@@ -371,25 +371,25 @@ null_char:
 ; rax = ip in hex
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _iptoint:
-    xor rax,rax             ; clear rax which will hold the result
+    xor rax,rax                 ; clear rax which will hold the result
 .next_one:
-    movzx rax ,byte[rsi]    ; get one character
-    inc rsi                 ; move pointer to next byte (increment)
+    movzx rax ,byte[rsi]        ; get one character
+    inc rsi                     ; move pointer to next byte (increment)
     cmp rax, '.'
-    je .handle_octet        ; go next octet
-    cmp rax, '0'            ; check less than '0'
+    je .handle_octet            ; go next octet
+    cmp rax, '0'                ; check less than '0'
     jl .done
-    cmp rax, '9'            ; check greater than '9'
+    cmp rax, '9'                ; check greater than '9'
     jg .done
     stosb
-    jmp .next_one           ; keep going until done
+    jmp .next_one               ; keep going until done
 .handle_octet:
-    mov rdx, ip_addr_buffer ; move octet to rdx
-    call _atoi              ; convert octet to int
-    push rax 
+    mov rdx, ip_addr_buffer     ; move octet to rdx
+    call _atoi                  ; convert octet to int
+    push rax                    ; push result to stack
     
     ; Clear Buffer
-    mov rdi, ip_addr_buffer
+    mov rdi, ip_addr_buffer     ; get buffer ready for next octet
     xor rax, rax
     mov rcx, 16
     rep stosb
@@ -403,7 +403,8 @@ _iptoint:
     call _atoi                  ; convert to int
     push rax                    ; save result to stack
 
-    mov rdi, ip_addr_buffer     ; clear the buffer
+    ; claer buffer
+    mov rdi, ip_addr_buffer     ; get buffer ready for result
     xor rax, rax
     mov rcx, 16
     rep stosb
@@ -411,11 +412,11 @@ _iptoint:
     mov rdi, ip_addr_buffer
 
     pop rax                     ; pop first octet
-    stosb                       
+    stosb                       ; write to buffer
     pop rax                     ; pop second octet
-    stosb
+    stosb                       ; write to buffer
     pop rax                     ; pop third octet
-    stosb
+    stosb                       ; write to buffer
     pop rax                     ; pop fourth octet
     stosb
 
