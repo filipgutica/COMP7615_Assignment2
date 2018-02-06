@@ -488,22 +488,22 @@ null_char:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohs, _htons
-; counts the number of characters in provided string
-;
+; converts 16 bit integer from network -> host byte order and vice versa
+; 
 ; Input
-; rax = int
+; rax = value to convert
 ; Output
 ; rax = host or network byte order of input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohs:
-_htons:
-rol ax, 8
+_htons: 
+rol ax, 8       ; see documentation for explination
 
 ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohl, _htonl
-; converts network -> host byte order and vice versa
+; converts 32 bit integer from network -> host byte order and vice versa
 ;
 ; Input
 ; rax = value to convert
@@ -512,7 +512,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohl:
 _htonl: 
-rol ax, 8   
+rol ax, 8       ; see documentation for explination
 rol eax, 16
 rol ax, 8
 

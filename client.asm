@@ -437,7 +437,7 @@ _iptoint:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohs:
 _htons: 
-rol ax, 8   
+rol ax, 8       ; see documentation for explination
 
 ret
 
@@ -452,7 +452,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohl:
 _htonl: 
-rol ax, 8   
+rol ax, 8       ; see documentation for explination
 rol eax, 16
 rol ax, 8
 
