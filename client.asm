@@ -428,8 +428,8 @@ _iptoint:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohs, _htons
-; converts network -> host byte order and vice versa
-;
+; converts 16 bit integer from network -> host byte order and vice versa
+; 
 ; Input
 ; rax = value to convert
 ; Output
@@ -443,7 +443,7 @@ ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohl, _htonl
-; converts network -> host byte order and vice versa
+; converts 32 bit integer from network -> host byte order and vice versa
 ;
 ; Input
 ; rax = value to convert
