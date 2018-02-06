@@ -23,17 +23,19 @@ struc sockaddr_in
 endstruc
 
 section .bss
-    sock resw 2                 ; connection socket descriptor
-    socketBuffer resb 256       ; buffer to store data sent to the socket
-    readCount resw 2            ; keeps track of how much data was read from socketBuffer
-    port resb 6                 ; get port from user
-    ip_addr resb 16             ; get ip from user    
+    sock            resw 2      ; connection socket descriptor
+    socketBuffer    resb 256    ; buffer to store data sent to the socket
+    readCount       resw 2      ; keeps track of how much data was read from socketBuffer
+    port            resb 6      ; get port from user
+    ip_addr         resb 16     ; get ip from user    
+    ip_addr_buffer  resb 16     ; buffer to use when converting ip
 
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
-    connect_err_msg      db "Accept Failed", 0x0a, 0
-    testMsg          db "comp 7615 assignment 2 test message", 0x0a, 0
-    enterPortnum    db "Enter Port Number: ", 0
+    connect_err_msg     db "Accept Failed", 0x0a, 0
+    testMsg             db "comp 7615 assignment 2 test message", 0x0a, 0
+    enterPortnum        db "Enter Port Number: ", 0
+    enterIP             db "Enter IP Address: ", 0
 
     ; sockaddr_in structure for the server the socket connects to
     connectionSocket istruc sockaddr_in
@@ -53,7 +55,7 @@ _start:
     mov rsi, enterPortnum
     call _prints
 
-    ;Read and store the user input into nvalue
+    ;Read and store the user input into port
     mov rax, SYS_READ       ; read flag
     mov rdi, STDIN          ; read from stdin
     mov rsi, port           ; read into nvalue
@@ -65,6 +67,25 @@ _start:
     call _ntohs           ; convert rax to host byte order
 
     mov [connectionSocket + sockaddr_in.sin_port], rax
+
+    ; GET IP from user
+    mov rsi, enterIP
+    call _prints
+
+    ; Read adn store user input into ip_addr
+    mov rax, SYS_READ
+    mov rdi, STDIN
+    mov rsi, ip_addr
+    mov rdx, 16
+    syscall
+
+    mov rsi, ip_addr
+    mov rdi, ip_addr_buffer
+    call _iptoint
+    call _ntohl
+
+    mov [connectionSocket + sockaddr_in.sin_addr], rax
+
 
     mov      word [sock], 0     ; Initialize socket value to 0, used for cleanup
     call _socket                ; Create and initialize socket
@@ -111,7 +132,7 @@ _connect:
     mov rax, 42                 ; SYS_CONNECT
     mov rdi, [sock]             ; connecting socket file descriptor
     mov rsi, connectionSocket   ; sockaddr_in struct
-    mov rdx, sockaddrInLen    ; length of sockaddr_in
+    mov rdx, sockaddrInLen      ; length of sockaddr_in
     syscall
 
     ; Check if call succeeded
@@ -125,7 +146,7 @@ _send:
     mov rax, SYS_WRITE
     mov rdi, [sock]
     mov rsi, testMsg            ; send our test message
-    call _strlen
+    call _strlen                ; get length of test message
     syscall
 
     ret
@@ -172,7 +193,6 @@ _connect_fail:
 ; length of the error message before calling _fail
 _fail:
     call _printerr
-    syscall
 
     mov rdi, 1
     call _exit
@@ -292,7 +312,7 @@ _itoa:
 ; None
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _prints:
-  call _strlen               ; load length of string into rdx
+  call _strlen              ; load length of string into rdx
   mov rax, SYS_WRITE        ; write flag
   mov rdi, STDOUT           ; write to stdout
   syscall
@@ -308,7 +328,7 @@ _prints:
 ; None
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _printerr:
-  call _strlen               ; load length of string into rdx
+  call _strlen              ; load length of string into rdx
   mov rax, SYS_WRITE        ; write flag
   mov rdi, STDERR           ; write to stdout
   syscall
@@ -341,6 +361,69 @@ null_char:
 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _iptoint
+; counts the number of characters in provided string
+;
+; Input
+; rsi = ip addr
+; Output
+; rax = ip in hex
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_iptoint:
+    xor rax,rax             ; clear rax which will hold the result
+.next_one:
+    movzx rax ,byte[rsi]    ; get one character
+    inc rsi                 ; move pointer to next byte (increment)
+    cmp rax, '.'
+    je .handle_octet        ; go next octet
+    cmp rax, '0'            ; check less than '0'
+    jl .done
+    cmp rax, '9'            ; check greater than '9'
+    jg .done
+    stosb
+    jmp .next_one           ; keep going until done
+.handle_octet:
+    mov rdx, ip_addr_buffer ; move octet to rdx
+    call _atoi              ; convert octet to int
+    push rax 
+    
+    ; Clear Buffer
+    mov rdi, ip_addr_buffer
+    xor rax, rax
+    mov rcx, 16
+    rep stosb
+
+    mov rdi, ip_addr_buffer     ; reload address of buffer into rdi to continue writing
+    jmp .next_one
+
+
+.done:
+    mov rdx, ip_addr_buffer     ; get the last octet
+    call _atoi                  ; convert to int
+    push rax                    ; save result to stack
+
+    mov rdi, ip_addr_buffer     ; clear the buffer
+    xor rax, rax
+    mov rcx, 16
+    rep stosb
+
+    mov rdi, ip_addr_buffer
+
+    pop rax                     ; pop first octet
+    stosb                       
+    pop rax                     ; pop second octet
+    stosb
+    pop rax                     ; pop third octet
+    stosb
+    pop rax                     ; pop fourth octet
+    stosb
+
+    mov rax, [ip_addr_buffer]   ; move result to rax
+    ret
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _ntohs, _htons
@@ -354,5 +437,22 @@ null_char:
 _ntohs:
 _htons: 
 rol ax, 8   
+
+ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _ntohl, _htonl
+; converts network -> host byte order and vice versa
+;
+; Input
+; rax = value to convert
+; Output
+; rax = host or network byte order of input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_ntohl:
+_htonl: 
+rol ax, 8   
+rol eax, 16
+rol ax, 8
 
 ret
