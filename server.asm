@@ -330,6 +330,7 @@ _atoi:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _itoa:
     xor   rbx, rbx          ; clear the rbx, I will use as counter for stack pushes
+    push rcx                ; save rcx
 .push_chars:
     xor rdx, rdx            ; clear rdx
     cmp rax, 0              ; check less then 0
@@ -359,6 +360,7 @@ _itoa:
     jg .pop_chars           ; not 0 repeat
     mov rax, 0              ; add line feed
     stosb                   ; write line feed to rdi => &num
+    pop rcx                 ; restore rcx
     ret                     ; return to main
 
 .handle_negative:
@@ -384,99 +386,33 @@ _itoa:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _printip:
     xor rax,rax                 ; clear rax which will hold the result
+    
+    mov rcx, 4
+    octetloop:
+        mov al, sil                 ; take one octet at a time off the end of rsi (last 8 bits)
+        mov rdi, client_ip          ; load address of client_ip info rdi
+        call _itoa                  ; convert client_ip contents to ascii
+        mov rax, [client_ip]        ; move result into rax
+        push rax                    ; save the result on the stack
+        xor rax, rax                ; clear rax
 
-.fist_octet:
-    mov al, sil                ; first byte of rsi
-    mov rdi, client_ip  
-    call _itoa
-    mov rax, [client_ip]
-    push rax                   ; first octet
-    xor rax, rax
+        shr rsi, 8                  ; shift rsi right by 8 bits, to get the next octet ready
+    loop octetloop
 
-    shr rsi, 8 
+    mov rcx, 3
+    printloop:
+        pop rax                     ; take an octet off of the stack (stored as ascii)
+        mov [client_ip], rax        ; put it into &client_ip
+        mov rsi, client_ip          ; print out the octet
+        call _prints            
 
-.second_octet:
-    ; Clear Buffer
-    mov rdi, client_ip     ; get buffer ready for next octet
-    xor rax, rax
-    mov rcx, 16
-    rep stosb        
-
-    mov al, sil 
-    mov rdi, client_ip  
-    call _itoa
-    mov rax, [client_ip]
-    push rax
-    xor rax, rax
-
-    shr rsi, 8
-
-.third_octet:
-    ; Clear Buffer
-    mov rdi, client_ip     ; get buffer ready for next octet
-    xor rax, rax
-    mov rcx, 16
-    rep stosb     
-
-
-    mov al, sil 
-    mov rdi, client_ip  
-    call _itoa
-    mov rax, [client_ip]
-    push rax
-    xor rax, rax
-
-    shr rsi, 8
-
-.fourth_octet:
-    ; Clear Buffer
-    mov rdi, client_ip     ; get buffer ready for next octet
-    xor rax, rax
-    mov rcx, 16
-    rep stosb     
-
-    mov al, sil 
-    mov rdi, client_ip  
-    call _itoa
-    mov rax, [client_ip]
-    push rax
-    xor rax, rax
+        mov rax, '.'                ; print a dot
+        mov [client_ip], rax        
+        mov rsi, client_ip
+        call _prints
+    loop printloop
   
-.done:
-    ; First octet
-    pop rax
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    mov rax, '.'
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    ; Second octet
-    pop rax
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    mov rax, '.'
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    ; Third octet
-    pop rax
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    mov rax, '.'
-    mov [client_ip], rax
-    mov rsi, client_ip
-    call _prints
-
-    ; Final octet
+    ; Print the final octet (no dot + line feed thats why it's outtside of loop)
     pop rax
     mov [client_ip], rax
     mov rsi, client_ip
@@ -501,10 +437,12 @@ _printip:
 ; None
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _prints:
-  call _strlen               ; load length of string into rdx
+  push rcx                  ; save rcx
+  call _strlen              ; load length of string into rdx
   mov rax, SYS_WRITE        ; write flag
   mov rdi, STDOUT           ; write to stdout
   syscall
+  pop rcx                   ; restore rcx
   ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

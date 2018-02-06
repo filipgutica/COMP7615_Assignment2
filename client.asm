@@ -79,10 +79,10 @@ _start:
     mov rdx, 16
     syscall
 
-    mov rsi, ip_addr
-    mov rdi, ip_addr_buffer
-    call _iptoint
-    call _ntohl
+    mov rsi, ip_addr            ; rsi will hold the ip address to be converted to int
+    mov rdi, ip_addr_buffer     ; get the buffer ready that will be used for ip to int conversion
+    call _iptoint               ; convert ip to int, result in rax
+    call _ntohl                 ; convert the ip, stored in rax to host byte order
 
     mov [connectionSocket + sockaddr_in.sin_addr], rax
 
@@ -373,19 +373,19 @@ null_char:
 _iptoint:
     xor rax,rax                 ; clear rax which will hold the result
 .next_one:
-    movzx rax ,byte[rsi]        ; get one character
+    movzx rax ,byte[rsi]        ; get one character at a time
     inc rsi                     ; move pointer to next byte (increment)
-    cmp rax, '.'
-    je .handle_octet            ; go next octet
+    cmp rax, '.'                ; check for a '.' 
+    je .handle_octet            ; handle the current octet
     cmp rax, '0'                ; check less than '0'
     jl .done
     cmp rax, '9'                ; check greater than '9'
     jg .done
-    stosb
+    stosb                       ; write a character to the ip addr buffer
     jmp .next_one               ; keep going until done
 .handle_octet:
-    mov rdx, ip_addr_buffer     ; move octet to rdx
-    call _atoi                  ; convert octet to int
+    mov rdx, ip_addr_buffer     ; we have one octet in the buffer, put into rdx
+    call _atoi                  ; convert octet to int, result in rax
     push rax                    ; push result to stack
     
     ; Clear Buffer
@@ -394,7 +394,7 @@ _iptoint:
     mov rcx, 16
     rep stosb
 
-    mov rdi, ip_addr_buffer     ; reload address of buffer into rdi to continue writing
+    mov rdi, ip_addr_buffer     ; reload address of buffer into rdi to continue writing to it
     jmp .next_one
 
 
