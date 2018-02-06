@@ -363,7 +363,7 @@ null_char:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; function _iptoint
-; counts the number of characters in provided string
+; converts ip string to integer representation
 ;
 ; Input
 ; rsi = ip addr
