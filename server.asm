@@ -9,28 +9,33 @@
 
 global _start
 
-SYS_EXIT  equ 60
-SYS_READ  equ 0
-SYS_WRITE equ 1
-STDIN     equ 0
-STDOUT    equ 1
-STDERR    equ 2
-MAX_LEN   equ 6
+SYS_EXIT            equ 60
+SYS_READ            equ 0
+SYS_WRITE           equ 1
+STDIN               equ 0
+STDOUT              equ 1
+STDERR              equ 2
+MAX_LEN             equ 6
+SYS_GETPEERNAME     equ 52
 
 ;; Data definitions
 struc sockaddr_in
     .sin_family resw 1
-    .sin_port resw 1
-    .sin_addr resd 1
-    .sin_zero resb 8
+    .sin_port   resw 1
+    .sin_addr   resd 1
+    .sin_zero   resb 8
 endstruc
 
 section .bss
-    sock resw 2
-    client resw 2
-    echobuf resb 256
-    read_count resw 2
-    port resb 6                 ; get port from user
+    sock                resw 2
+    client              resw 2
+    echobuf             resb 256
+    read_count          resw 2
+    port                resb 6
+    client_addr         resb 16  
+    client_addr_len     resw 2
+
+             
 
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
@@ -50,6 +55,7 @@ section .data
 
     enterPortnum    db "Enter Port Number: ", 0
 
+  
     ;; sockaddr_in structure for the address the listening socket binds to
     pop_sa istruc sockaddr_in
         at sockaddr_in.sin_family, dw 2           ; AF_INET
@@ -58,6 +64,7 @@ section .data
         at sockaddr_in.sin_zero, dd 0, 0
     iend
     sockaddr_in_len     equ $ - pop_sa
+
 
 section .text
 
@@ -77,12 +84,12 @@ _start:
 
     mov rdx, port         ; put value to convert into rdx
     call _atoi            ; convert contents of rdx to int, result in rax
-    call _ntohs           ; convert rax to host byte order
+    call _ntohs           ; convert rax (port) to host byte order
 
     mov [pop_sa + sockaddr_in.sin_port], rax
     ;; Initialize listening and client socket values to 0, used for cleanup
-    mov      word [sock], 0
-    mov      word [client], 0
+    mov word [sock], 0
+    mov word [client], 0
 
     ;; Initialize socket
     call     _socket
@@ -161,10 +168,10 @@ _listen:
 ;; Accept a cleint connection and store the new client socket descriptor
 _accept:
     ;; Call sys_accept
-    mov       rax, 43         ; SYS_ACCEPT
-    mov       rdi, [sock]     ; listening socket fd
-    mov       rsi, 0          ; NULL sockaddr_in value as we don't need that data
-    mov       rdx, 0          ; NULLs have length 0
+    mov       rax, 43                   ; SYS_ACCEPT
+    mov       rdi, [sock]               ; listening socket fd
+    mov       rsi, client_addr          ; client addr
+    mov       rdx, client_addr_len      ; client addr length
     syscall
 
     ;; Check if call succeeded
@@ -173,6 +180,8 @@ _accept:
 
     ;; Store returned client socket descriptor
     mov     [client], rax
+
+    mov rax, [client_addr + sockaddr_in.sin_addr]
 
     ;; Print connection message to stdout
     mov       rax, 1             ; SYS_WRITE
@@ -435,6 +444,23 @@ null_char:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _ntohs:
 _htons:
+rol ax, 8
+
+ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; function _ntohl, _htonl
+; converts network -> host byte order and vice versa
+;
+; Input
+; rax = value to convert
+; Output
+; rax = host or network byte order of input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_ntohl:
+_htonl: 
+rol ax, 8   
+rol eax, 16
 rol ax, 8
 
 ret
