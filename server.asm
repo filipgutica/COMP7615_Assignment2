@@ -32,7 +32,7 @@ section .bss
     echobuf             resb 256
     read_count          resw 2
     port                resb 6
-    client_addr         resb 16  
+    client_addr         resb 32  
     client_addr_len     resw 2
 
              
