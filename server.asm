@@ -86,7 +86,8 @@ _start:
     call _atoi            ; convert contents of rdx to int, result in rax
     call _ntohs           ; convert rax (port) to host byte order
 
-    mov [pop_sa + sockaddr_in.sin_port], rax
+    mov [pop_sa + sockaddr_in.sin_port], rax        ; write port to the struct
+
     ;; Initialize listening and client socket values to 0, used for cleanup
     mov word [sock], 0
     mov word [client], 0
@@ -171,7 +172,7 @@ _accept:
     mov       rax, 43                   ; SYS_ACCEPT
     mov       rdi, [sock]               ; listening socket fd
     mov       rsi, client_addr          ; client addr
-    lea       rdx, [client_addr_len]      ; client addr length
+    lea       rdx, [client_addr_len]    ; client addr length
     syscall
 
     ;; Check if call succeeded
@@ -189,10 +190,6 @@ _accept:
     call _htonl                                     ; convert ip address to network byte order
     mov rsi, rax                                    ; put the ip into RSI
     call _printip                                   ; print the IP
-
-    mov rsi, client_ip
-    call _prints
-    
 
     ret
 
@@ -387,7 +384,7 @@ _itoa:
 _printip:
     xor rax,rax                 ; clear rax which will hold the result
     
-    mov rcx, 4
+    mov rcx, 4                      ; loop 4 times, 4 octets
     octetloop:
         mov al, sil                 ; take one octet at a time off the end of rsi (last 8 bits)
         mov rdi, client_ip          ; load address of client_ip info rdi
@@ -399,7 +396,7 @@ _printip:
         shr rsi, 8                  ; shift rsi right by 8 bits, to get the next octet ready
     loop octetloop
 
-    mov rcx, 3
+    mov rcx, 3                      ; loop 3 times, print last octet outside of loop
     printloop:
         pop rax                     ; take an octet off of the stack (stored as ascii)
         mov [client_ip], rax        ; put it into &client_ip
