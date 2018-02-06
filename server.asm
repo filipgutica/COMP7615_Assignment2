@@ -32,11 +32,15 @@ section .bss
     echobuf             resb 256
     read_count          resw 2
     port                resb 6
-    client_addr         resb 16  
-    client_addr_len     resw 2
+    client_addr:
+        istruc sockaddr_in
+            at sockaddr_in.sin_family,  resw 1
+            at sockaddr_in.sin_port,    resw 1
+            at sockaddr_in.sin_addr,    resd 1 
+            at sockaddr_in.sin_zero,    resb 8
+        iend
 
              
-
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
     sock_err_msg_len    equ $ - sock_err_msg
@@ -53,15 +57,15 @@ section .data
     accept_msg          db "Client Connected!", 0x0a, 0
     accept_msg_len      equ $ - accept_msg
 
-    enterPortnum    db "Enter Port Number: ", 0
+    enterPortnum        db "Enter Port Number: ", 0
 
-  
+    client_addr_len     db 16
     ;; sockaddr_in structure for the address the listening socket binds to
     pop_sa istruc sockaddr_in
-        at sockaddr_in.sin_family, dw 2           ; AF_INET
-        at sockaddr_in.sin_port, dw 0xce56        ; port 22222 in host byte order
-        at sockaddr_in.sin_addr, dd 0             ; localhost - INADDR_ANY
-        at sockaddr_in.sin_zero, dd 0, 0
+        at sockaddr_in.sin_family,  dw 2            ; AF_INET
+        at sockaddr_in.sin_port,    dw 0xce56       ; port 22222 in host byte order
+        at sockaddr_in.sin_addr,    dd 0            ; localhost - INADDR_ANY
+        at sockaddr_in.sin_zero,    dd 0, 0
     iend
     sockaddr_in_len     equ $ - pop_sa
 
@@ -171,7 +175,7 @@ _accept:
     mov       rax, 43                   ; SYS_ACCEPT
     mov       rdi, [sock]               ; listening socket fd
     mov       rsi, client_addr          ; client addr
-    mov       rdx, client_addr_len      ; client addr length
+    lea       rdx, [client_addr_len]      ; client addr length
     syscall
 
     ;; Check if call succeeded
