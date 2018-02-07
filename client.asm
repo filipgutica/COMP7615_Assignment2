@@ -24,16 +24,19 @@ endstruc
 
 section .bss
     sock            resw 2      ; connection socket descriptor
-    socketBuffer    resb 256    ; buffer to store data sent to the socket
+    socketBuffer    resb 256    ; buffer to store data received by the socket
     readCount       resw 2      ; keeps track of how much data was read from socketBuffer
     port            resb 6      ; get port from user
-    ip_addr         resb 16     ; get ip from user    
+    ip_addr         resb 16     ; get ip from user
+    messageBuffer   resb 256    ; buffer to store the message sent to server
+    numOfMessages   resb 8      ; buffer to store number of times to send message
     ip_addr_buffer  resb 16     ; buffer to use when converting ip
 
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
     connect_err_msg     db "Accept Failed", 0x0a, 0
-    testMsg             db "comp 7615 assignment 2 test message", 0x0a, 0
+    sendMsgPrompt       db "Enter message to send: ", 0
+    sendNumOfTimesPrompt    db "Number of times to send message: ", 0
     enterPortnum        db "Enter Port Number: ", 0
     enterIP             db "Enter IP Address: ", 0
 
@@ -86,13 +89,39 @@ _start:
 
     mov [connectionSocket + sockaddr_in.sin_addr], rax
 
+    ; prompt user for message to send to server
+    mov rsi, sendMsgPrompt
+    call _prints
+
+    ; Read and store user input into messageBuffer
+    mov rax, SYS_READ       ; read flag
+    mov rdi, STDIN          ; read from stdin
+    mov rsi, messageBuffer
+    mov rdx, 256        ; number bytes to be read
+    syscall
+
+    ; prompt user for number of times to send message
+    mov rsi, sendNumOfTimesPrompt
+    call _prints
+
+    ; Read and store user input into numOfMessages 
+    mov rax, SYS_READ       ; read flag
+    mov rdi, STDIN          ; read from stdin
+    mov rsi, numOfMessages
+    mov rdx, 8        ; number bytes to be read
+    syscall
 
     mov      word [sock], 0     ; Initialize socket value to 0, used for cleanup
     call _socket                ; Create and initialize socket
     call _connect               ; Use socket to connect to server
 
+
     ; Send message to server multiple times and print out whatever the server sends back
-    mov rcx, 3          ; use a loop counter to control the number of times to send message
+
+    ; convert numOfMessages from ASCII to int to be used by loop
+    mov rdx, numOfMessages
+    call _atoi
+    mov rcx, rax        ; use a loop counter to control the number of times to send message
     sendLoop:
         push rcx        ; preserve the value in rcx to ensure loop works properly
         call _send      ; send message to the server
@@ -145,7 +174,7 @@ _connect:
 _send:
     mov rax, SYS_WRITE
     mov rdi, [sock]
-    mov rsi, testMsg            ; send our test message
+    mov rsi, messageBuffer      ; send our test message
     call _strlen                ; get length of test message
     syscall
 
