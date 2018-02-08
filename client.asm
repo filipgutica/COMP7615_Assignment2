@@ -29,7 +29,7 @@ section .bss
     port            resb 6      ; get port from user
     ip_addr         resb 16     ; get ip from user
     messageBuffer   resb 256    ; buffer to store the message sent to server
-    numOfMessages   resb 8      ; buffer to store number of times to send message
+    numOfMessages   resw 2      ; buffer to store number of times to send message
     ip_addr_buffer  resb 16     ; buffer to use when converting ip
 
 section .data
@@ -69,9 +69,9 @@ _start:
     mov rcx, 16                 ; IP address input in ASCII is maximum 15 chars plus the linefeed char
     lea rdx, [ip_addr]
     checkLinefeed:
-    cmp byte [rdx+rcx], 0x0a      ; start clearing at the end of the buffer
-    je removeLinefeed
-    loop checkLinefeed
+        cmp byte [rdx+rcx], 0x0a      ; start clearing at the end of the buffer
+        je removeLinefeed
+        loop checkLinefeed
     removeLinefeed:
     mov byte [rdx+rcx], 0
 
@@ -80,7 +80,8 @@ _start:
     call _iptoint               ; convert ip to int, result in rax
     call _ntohl                 ; convert the ip, stored in rax to host byte order
 
-    mov [connectionSocket + sockaddr_in.sin_addr], rax
+    push rax                    ; save IP to stack
+
 
     ; Get PORT from user
     mov rsi, enterPortnum
@@ -96,8 +97,7 @@ _start:
     mov rdx, port         ; put value to convert into rdx
     call _atoi            ; convert contents of rdx to int, result in rax
     call _ntohs           ; convert rax to host byte order
-
-    mov [connectionSocket + sockaddr_in.sin_port], rax
+    push rax              ; save port to stack
 
     ; prompt user for message to send to server
     mov rsi, sendMsgPrompt
@@ -107,7 +107,7 @@ _start:
     mov rax, SYS_READ       ; read flag
     mov rdi, STDIN          ; read from stdin
     mov rsi, messageBuffer
-    mov rdx, 256        ; number bytes to be read
+    mov rdx, 256            ; number bytes to be read
     syscall
 
     ; prompt user for number of times to send message
@@ -118,8 +118,14 @@ _start:
     mov rax, SYS_READ       ; read flag
     mov rdi, STDIN          ; read from stdin
     mov rsi, numOfMessages
-    mov rdx, 8        ; number bytes to be read
+    mov rdx, 8              ; number bytes to be read
     syscall
+
+
+    pop rax
+    mov [connectionSocket + sockaddr_in.sin_port], rax
+    pop rax
+    mov [connectionSocket + sockaddr_in.sin_addr], rax
 
     mov      word [sock], 0     ; Initialize socket value to 0, used for cleanup
     call _socket                ; Create and initialize socket
@@ -168,6 +174,8 @@ _socket:
 
 ; Use the socket previously created to establish a connection to the specified server
 _connect:
+    mov rax, [connectionSocket + sockaddr_in.sin_addr]
+
     mov rax, 42                 ; SYS_CONNECT
     mov rdi, [sock]             ; connecting socket file descriptor
     mov rsi, connectionSocket   ; sockaddr_in struct

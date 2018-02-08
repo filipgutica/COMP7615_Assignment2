@@ -345,7 +345,7 @@ _itoa:
     jl .handle_negative     ; handle negative number
 .continue_push_chars:
     mov rcx, 10             ; rcx is divisor, devide by 10
-    div rcx                 ; devide rdx by rcx, result in rax remainder in rdx
+    div rcx                 ; devide rax by rcx, result in rax remainder in rdx
     add rdx, '0'            ; add '0' or 0x30 to rdx convert int => ascii
     push rdx                ; push result to stack
     inc rbx                 ; increment my stack push counter
