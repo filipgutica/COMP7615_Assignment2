@@ -11,49 +11,6 @@
 
 global _start
 
-;; Data definitions
-struc sockaddr_in
-    .sin_family resw 1
-    .sin_port   resw 1
-    .sin_addr   resd 1
-    .sin_zero   resb 8
-endstruc
-
-section .bss
-    sock                resw 2
-    client              resw 2
-    echobuf             resb 256
-    read_count          resw 2
-    port                resb 6
-    client_ip           resb 16
-    client_addr:
-        istruc sockaddr_in
-            at sockaddr_in.sin_family,  resw 1
-            at sockaddr_in.sin_port,    resw 1
-            at sockaddr_in.sin_addr,    resd 1 
-            at sockaddr_in.sin_zero,    resb 8
-        iend
-
-             
-section .data
-    sock_err_msg        db "Failed to initialize socket", 0x0a, 0
-    bind_err_msg        db "Failed to bind socket", 0x0a, 0
-    lstn_err_msg        db "Socket Listen Failed", 0x0a, 0
-    accept_err_msg      db "Accept Failed", 0x0a, 0
-    accept_msg          db "Client Connected from address: ", 0
-    enterPortnum        db "Enter Listening Port Number: ", 0
-    clientMessage       db "Client Message: ", 0
-    client_addr_len     db 16
-
-    ;; sockaddr_in structure for the address the listening socket binds to
-    pop_sa istruc sockaddr_in
-        at sockaddr_in.sin_family,  dw 2            ; AF_INET
-        at sockaddr_in.sin_port,    dw 0xce56       ; port 22222 in host byte order
-        at sockaddr_in.sin_addr,    dd 0            ; localhost - INADDR_ANY
-        at sockaddr_in.sin_zero,    dd 0, 0
-    iend
-    sockaddr_in_len     equ $ - pop_sa
-
 
 section .text
 
