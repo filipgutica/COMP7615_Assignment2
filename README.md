@@ -123,7 +123,7 @@ In order to implement the client and server, there were a few necessary function
 
     Return 
 
-	  Example: 2222 = 0x56ce = 0101 0110 1100 1110
+    Example: 2222 = 0x56ce = 0101 0110 1100 1110
 
     Shift left by 8 bits
 
@@ -174,18 +174,23 @@ In order to implement the client and server, there were a few necessary function
 # Functions in Action: 
 
 Value contained in &port before calling ATOI:
+
 ![image alt text](/readme_images/image_0.png)
 
 Result of ATOI function in EAX:
+
 ![image alt text](/readme_images/image_1.png)
 
 Result of NTOHS function:
+
 ![image alt text](/readme_images/image_2.png)
 
 Value of  IP address 127.0.0.1 in hex prior to NTOHL:
+
 ![image alt text](/readme_images/image_3.png)
 
 Value of the same IP address after call to NTOHL:
+
 ![image alt text](/readme_images/image_4.png)
 
 # Testing
