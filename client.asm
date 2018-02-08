@@ -39,7 +39,7 @@ section .data
     sendNumOfTimesPrompt    db "Number of times to send message: ", 0
     enterPortnum        db "Enter Port Number: ", 0
     enterIP             db "Enter IP Address: ", 0
-    separator           db "response: ", 0
+    separator           db " response: ", 0
 
     ; sockaddr_in structure for the server the socket connects to
     connectionSocket istruc sockaddr_in
