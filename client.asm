@@ -39,6 +39,7 @@ section .data
     sendNumOfTimesPrompt    db "Number of times to send message: ", 0
     enterPortnum        db "Enter Port Number: ", 0
     enterIP             db "Enter IP Address: ", 0
+    separator           db "response: ", 0
 
     ; sockaddr_in structure for the server the socket connects to
     connectionSocket istruc sockaddr_in
@@ -53,6 +54,33 @@ section .text
 
 ; Client main entry point
 _start:
+    ; GET IP from user
+    mov rsi, enterIP
+    call _prints
+
+    ; Read adn store user input into ip_addr
+    mov rax, SYS_READ
+    mov rdi, STDIN
+    mov rsi, ip_addr
+    mov rdx, 16
+    syscall
+
+    ; search for the linefeed in ip_addr and remove it
+    mov rcx, 16                 ; IP address input in ASCII is maximum 15 chars plus the linefeed char
+    lea rdx, [ip_addr]
+    checkLinefeed:
+    cmp byte [rdx+rcx], 0x0a      ; start clearing at the end of the buffer
+    je removeLinefeed
+    loop checkLinefeed
+    removeLinefeed:
+    mov byte [rdx+rcx], 0
+
+    mov rsi, ip_addr            ; rsi will hold the ip address to be converted to int
+    mov rdi, ip_addr_buffer     ; get the buffer ready that will be used for ip to int conversion
+    call _iptoint               ; convert ip to int, result in rax
+    call _ntohl                 ; convert the ip, stored in rax to host byte order
+
+    mov [connectionSocket + sockaddr_in.sin_addr], rax
 
     ; Get PORT from user
     mov rsi, enterPortnum
@@ -70,24 +98,6 @@ _start:
     call _ntohs           ; convert rax to host byte order
 
     mov [connectionSocket + sockaddr_in.sin_port], rax
-
-    ; GET IP from user
-    mov rsi, enterIP
-    call _prints
-
-    ; Read adn store user input into ip_addr
-    mov rax, SYS_READ
-    mov rdi, STDIN
-    mov rsi, ip_addr
-    mov rdx, 16
-    syscall
-
-    mov rsi, ip_addr            ; rsi will hold the ip address to be converted to int
-    mov rdi, ip_addr_buffer     ; get the buffer ready that will be used for ip to int conversion
-    call _iptoint               ; convert ip to int, result in rax
-    call _ntohl                 ; convert the ip, stored in rax to host byte order
-
-    mov [connectionSocket + sockaddr_in.sin_addr], rax
 
     ; prompt user for message to send to server
     mov rsi, sendMsgPrompt
@@ -190,8 +200,12 @@ _receive:
     mov rdx, 256             ; read 256 bytes
     syscall
 
-    ; Call sys_write
-    mov rsi, socketBuffer   ; buffer
+    ; print echo received from server
+    mov rsi, ip_addr
+    call _prints
+    mov rsi, separator
+    call _prints
+    mov rsi, socketBuffer
     call _prints
 
     ret

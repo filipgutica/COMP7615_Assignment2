@@ -1,6 +1,6 @@
 ;; TCP echo server using x86_64 Linux syscalls
 ;; Assemble and link as follows:
-;;        nasm -f elf64 -o server.o server.asm
+;;        nasm -f elf64 -g -o server.o server.asm
 ;;        ld server.o -o server
 ;;
 ;;
@@ -17,6 +17,7 @@ STDOUT              equ 1
 STDERR              equ 2
 MAX_LEN             equ 6
 SYS_GETPEERNAME     equ 52
+ECHO_BUF_LEN        equ 256
 
 ;; Data definitions
 struc sockaddr_in
@@ -44,18 +45,14 @@ section .bss
              
 section .data
     sock_err_msg        db "Failed to initialize socket", 0x0a, 0
-
     bind_err_msg        db "Failed to bind socket", 0x0a, 0
-
     lstn_err_msg        db "Socket Listen Failed", 0x0a, 0
-
     accept_err_msg      db "Accept Failed", 0x0a, 0
-
     accept_msg          db "Client Connected from address: ", 0
-
-    enterPortnum        db "Enter Port Number: ", 0
-
+    enterPortnum        db "Enter Listening Port Number: ", 0
+    clientMessage       db "Client Message: ", 0
     client_addr_len     db 16
+
     ;; sockaddr_in structure for the address the listening socket binds to
     pop_sa istruc sockaddr_in
         at sockaddr_in.sin_family,  dw 2            ; AF_INET
@@ -112,6 +109,12 @@ _start:
             mov     rax, [read_count]
             cmp     rax, 0
             je      .read_complete
+
+            ; Print messages received from the client
+            mov rsi, clientMessage
+            call _prints
+            mov rsi, echobuf
+            call _prints
         jmp .readloop
 
         .read_complete:
@@ -196,11 +199,19 @@ _accept:
 ;; Reads up to 256 bytes from the client into echobuf and sets the read_count variable
 ;; to be the number of bytes read by sys_read
 _read:
+    ; clear echobuf if previously written to
+    mov rcx, ECHO_BUF_LEN
+    lea rdx, [echobuf]
+    xor al, al                  ; load 0 into al
+    clearBuffer:
+    mov byte [rdx+rcx], al      ; start clearing at the end of the buffer
+    loop clearBuffer
+
     ;; Call sys_read
-    mov     rax, 0          ; SYS_READ
-    mov     rdi, [client]   ; client socket fd
-    mov     rsi, echobuf    ; buffer
-    mov     rdx, 256        ; read 256 bytes
+    mov     rax, 0              ; SYS_READ
+    mov     rdi, [client]       ; client socket fd
+    mov     rsi, echobuf        ; buffer
+    mov     rdx, ECHO_BUF_LEN   ; read 256 bytes
     syscall
 
     ;; Copy number of bytes read to variable
